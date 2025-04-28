@@ -12,6 +12,7 @@ set_fix_hold [get_clocks clk]
 
 set_input_delay  [expr $cycle * 0.5] -clock clk [remove_from_collection [all_inputs] {clk}]
 set_output_delay [expr $cycle * 0.5] -clock clk [all_outputs]
+set enable_recovery_removal_arcs true
 set_drive 1 [all_inputs]
 set_load 0.05 [all_outputs]
 
