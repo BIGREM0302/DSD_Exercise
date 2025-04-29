@@ -39,7 +39,7 @@ reg [2:0] cnt_stage_r, cnt_stage_w; //counter to keep track of the number of sta
 reg [6:0] cnt_round_r, cnt_round_w; //counter to keep track of the number of rounds
 reg [31:0] w1, w2, w3, w4, w5, w6; 
 wire [31:0] cur_update_var;
-reg [31:0] r1_r, r2_r, r3_r, r4_r, r1_w, r2_w, r3_w, r4_w;
+reg [31:0] r1_r, r2_r, r3_r, r1_w, r2_w, r3_w, r4_w;
 
 localparam MAX_ITER = 15; //maximum number of variables
 localparam MAX_ROUND = 69; //maximum number of iterations
@@ -138,7 +138,7 @@ if(state_r == CALC)begin
     r1_w = w3+w6;
     r2_w = mul_6((w2+w5));
     r3_w = mul_13((w1+w4));
-    r4_w = r1_r - r2_r + r3_r + b[cnt_r];
+    r4_w = r1_r - r2_r + r3_r + {b[cnt_r], 16'd0};
 end
 
 end
@@ -210,13 +210,18 @@ always @(posedge clk) begin
         r1_r <= r1_w;
         r2_r <= r2_w;
         r3_r <= r3_w;
-        r4_r <= r4_w;
     end
 end
 
 //answer update
 always @(posedge clk) begin
-    if(state_r == CALC && cnt_stage_r == MAX_STAGE) begin
+    if(state_r == RECEIVE) begin
+        //initial values as all 1
+        for(i = 0; i < 16; i = i + 1)begin
+            ans[i] <= {16'd1, 16'd0};
+        end
+    end
+    else if(state_r == CALC && cnt_stage_r == MAX_STAGE) begin
         ans[cnt_r] <= cur_update_var;
     end
 end
