@@ -3,47 +3,48 @@ input   clk ;
 input   reset ;
 input   in_en;
 output out_valid;
-input   [15:0]  b_in;
-output reg [31:0]  x_out;
+input  signed [15:0]  b_in;
+output [31:0]  x_out;
 
 reg [2:0] state_r, state_w;
 localparam RECEIVE = 0;
 localparam CALC = 1; //Do Gauss Seidel approximtiatin
 localparam SEND = 2;
 
-reg [15:0] b [0:15]; //store offsets b1 b2... b16 16bits each
-reg [31:0] ans [0:15]; //store answers x1 x2... x16 32bits each
+reg signed [15:0] b [0:15]; //store offsets b1 b2... b16 16bits each
+reg signed [31:0] ans [0:15]; //store answers x1 x2... x16 32bits each
 reg [10:0] cnt_r, cnt_w; 
-reg [31:0] pipeline_r [0:5]; 
-reg [31:0] pipeline_w [0:5]; 
-reg [31:0] pipeline_support_1;
-reg [31:0] pipeline_support_2;
-reg [31:0] pipeline_support_3;
-reg [31:0] pipeline_src [0:5];
+reg signed [31:0] pipeline_r [0:5]; 
+reg signed [31:0] pipeline_w [0:5]; 
+reg signed [31:0] pipeline_support_1;
+reg signed [31:0] pipeline_support_2;
+reg signed [31:0] pipeline_support_3;
+reg signed [31:0] pipeline_src [0:5];
 reg [3:0] pipeline_b_src;
 reg [3:0] mapping;
 
 localparam MAX_ITER = 70; //maximum number of iterations
-localparam PIPELINE_MAX = 16* MAX_ITER; 
+localparam PIPELINE_MAX = 16 * MAX_ITER; 
 
 assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
+assign x_out = ans[mapping];
 
 function [31:0] mul_3;
-input [31:0] a;
+input signed [31:0] a;
 begin
     mul_3 = a + a<<1;
 end
 endfunction
 
 function [31:0] mul_18;
-input [31:0] a;
+input signed [31:0] a;
 begin
     mul_18 = a<<1 + a<<4;
 end
 endfunction
 
 function [31:0] mul_39;
-input [31:0] a;
+input signed [31:0] a;
 begin
     mul_39 = a + a<<1 + a<<2 + a<<5;
 end
@@ -124,7 +125,7 @@ always@(*)begin
         end
     endcase
 
-    pipeline_w[0] = mul_3(b[cnt_r[3:0]]);
+    pipeline_w[0] = mul_3(b[pipeline_b_src]<<16);
     pipeline_w[1] = mul_3(pipeline_src[0] +pipeline_src[1]);
     pipeline_w[2] = mul_18(pipeline_src[2] + pipeline_src[3]);
     pipeline_w[3] = mul_39(pipeline_src[4] + pipeline_src[5]);
@@ -169,7 +170,6 @@ always@(*)begin
             if(cnt_r == 15) begin
                 state_w = RECEIVE;
                 cnt_w = 0;
-                idx_w = 0;
             end
 
             else begin
@@ -199,24 +199,38 @@ always@(*)begin
         15: mapping = 4'd15;
     endcase
 end
+
 //b_in
-always @(posedge clk) begin
-    if (state_r == RECEIVE && ien) begin
-        b[mapping] <= b_in;
+always @(posedge clk or posedge reset) begin
+    if(reset) begin
+        b[0] = 0;
+        b[1] = 0;
+        b[2] = 0;
+        b[3] = 0;
+        b[4] = 0;
+        b[5] = 0;
+        b[6] = 0;
+        b[7] = 0;
+        b[8] = 0;
+        b[9] = 0;
+        b[10] = 0;
+        b[11] = 0;
+        b[12] = 0;
+        b[13] = 0;
+        b[14] = 0;
+        b[15] = 0;
+    end
+
+    else begin
+        if(state_r == RECEIVE && in_en) begin
+            b[mapping] <= b_in;
+        end
     end
 end
-
-//x_out
-always @(posedge clk) begin
-    if (state_r == SEND) begin
-        x_out <= ans[mapping];
-    end
-end
-
 
 always@(posedge clk or posedge reset)begin
     if(reset)begin
-        state_r <= IDLE;
+        state_r <= RECEIVE;
         cnt_r <= 0;
         pipeline_r[0] <= 0; 
         pipeline_r[1] <= 0;
@@ -258,6 +272,10 @@ always@(posedge clk or posedge reset)begin
     end
 
     else begin
+        if(state_r == RECEIVE && in_en) begin
+            ans[mapping] <= (b_in<<16);
+        end
+
         if(state_r == CALC) begin
             ans[0] <= ans[1];
             ans[1] <= ans[2];
@@ -271,10 +289,10 @@ always@(posedge clk or posedge reset)begin
             ans[9] <= ans[10];
             ans[10] <= ans[11];
             ans[11] <= ans[12];
-            ans[12] <= ans[13];
+            ans[12] <= pipeline_support_3;
             ans[13] <= ans[14];
             ans[14] <= ans[15];
-            ans[15] <= pipeline_support_3;
+            ans[15] <= ans[0;]
         end
     end
 end
