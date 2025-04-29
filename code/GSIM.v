@@ -20,6 +20,24 @@ localparam MAX_ITER = 16; //maximum number of iterations
 
 assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
 
+function [31:0] mul_6;
+input [31:0] a;
+begin
+mul_6 = (a<<1) + (a<<2);
+end
+endfunction
+
+function [31:0] mul_13;
+input [31:0] a;
+begin
+mul_6 = a + (a<<2) + (a<<3);
+end
+endfunction
+
+function [31:0] div;
+
+
+endfunction
 
 //FSM
 always@(*)begin
