@@ -125,7 +125,7 @@ always@(*)begin
         end
     endcase
 
-    pipeline_w[0] = mul_3(b[pipeline_b_src]<<16);
+    pipeline_w[0] = mul_3({b[pipeline_b_src],16'd0});
     pipeline_w[1] = mul_3(pipeline_src[0] +pipeline_src[1]);
     pipeline_w[2] = mul_18(pipeline_src[2] + pipeline_src[3]);
     pipeline_w[3] = mul_39(pipeline_src[4] + pipeline_src[5]);
@@ -273,10 +273,10 @@ always@(posedge clk or posedge reset)begin
 
     else begin
         if(state_r == RECEIVE && in_en) begin
-            ans[mapping] <= (b_in<<16);
+            ans[mapping] <= ({b_in,16'd0});
         end
 
-        if(state_r == CALC) begin
+        else if(state_r == CALC) begin
             ans[0] <= ans[1];
             ans[1] <= ans[2];
             ans[2] <= ans[3];
@@ -292,7 +292,7 @@ always@(posedge clk or posedge reset)begin
             ans[12] <= pipeline_support_3;
             ans[13] <= ans[14];
             ans[14] <= ans[15];
-            ans[15] <= ans[0;]
+            ans[15] <= ans[0];
         end
     end
 end
