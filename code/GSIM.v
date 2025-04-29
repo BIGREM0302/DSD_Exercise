@@ -76,7 +76,7 @@ end
 //x_out
 always @(posedge clk) begin
     if (state_r == SEND) begin
-        x_out <= ans[cnt_r];
+        x_out <= ans[cnt_w];
     end
 end
 
