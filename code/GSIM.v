@@ -1,4 +1,24 @@
 `timescale 1ns/10ps
+module div_20(
+    input [31:0] a,
+    input clk,
+    input reset,
+    output reg [31:0] b
+);
+
+reg [31:0] b_in [0:2];
+
+always@(posedge clk) begin
+
+     b_in[0] <= (a + a>>4);
+     b_in[1] <= (b_in[0] + b_in[0]>>8);
+     b_in[2] <= (b_in[1] + b_in[1]>>12);
+     b       <= b_in[2] >> 6;
+
+end
+
+endmodule
+
 module GSIM ( clk, reset, in_en, b_in, out_valid, x_out);
 input   clk ;
 input   reset ;
@@ -20,23 +40,25 @@ localparam MAX_ITER = 16; //maximum number of iterations
 
 assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
 
+function [31:0] mul_3;
+input [31:0] a;
+begin
+mul_6 = a + a<<1;
+end
+endfunction
+
 function [31:0] mul_6;
 input [31:0] a;
 begin
-mul_6 = (a<<1) + (a<<2);
+mul_6 = (mul_3(a))<<1;
 end
 endfunction
 
 function [31:0] mul_13;
 input [31:0] a;
 begin
-mul_6 = a + (a<<2) + (a<<3);
+mul_6 = a + (mul_6(a)<<1);
 end
-endfunction
-
-function [31:0] div;
-
-
 endfunction
 
 //FSM
