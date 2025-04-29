@@ -23,7 +23,7 @@ reg signed [31:0] pipeline_src [0:5];
 reg [3:0] pipeline_b_src;
 reg [3:0] mapping;
 
-localparam MAX_ITER = 70; //maximum number of iterations
+localparam MAX_ITER = 100; //maximum number of iterations
 localparam PIPELINE_MAX = 16 * MAX_ITER; 
 
 assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
@@ -39,14 +39,14 @@ endfunction
 function [31:0] mul_18;
 input signed [31:0] a;
 begin
-    mul_18 = a<<1 + a<<4;
+    mul_18 = (a<<1) + (a<<4);
 end
 endfunction
 
 function [31:0] mul_39;
 input signed [31:0] a;
 begin
-    mul_39 = a + a<<1 + a<<2 + a<<5;
+    mul_39 = (a + (a<<1)) + ((a<<2) + (a<<5));
 end
 endfunction
 
@@ -130,9 +130,9 @@ always@(*)begin
     pipeline_w[2] = mul_18(pipeline_src[2] + pipeline_src[3]);
     pipeline_w[3] = mul_39(pipeline_src[4] + pipeline_src[5]);
     pipeline_support_1 = ((pipeline_r[0] - pipeline_r[2]) + (pipeline_r[1] + pipeline_r[3]));
-    pipeline_w[4] = pipeline_support_1 + pipeline_support_1 >>> 4;
-    pipeline_w[5] =  pipeline_r[4] +  pipeline_r[4]>>>8;
-    pipeline_support_2 = pipeline_r[5] + pipeline_r[5]>>>12;
+    pipeline_w[4] = pipeline_support_1 + (pipeline_support_1 >>> 4);
+    pipeline_w[5] =  pipeline_r[4] +  (pipeline_r[4]>>>8);
+    pipeline_support_2 = pipeline_r[5] + (pipeline_r[5]>>>12);
     pipeline_support_3 = pipeline_support_2 >>> 6;
 
 end
@@ -156,7 +156,7 @@ always@(*)begin
         end
 
         CALC: begin
-            if(cnt_r == PIPELINE_MAX) begin
+            if(cnt_r == PIPELINE_MAX-1) begin
                 state_w = SEND;
                 cnt_w = 0;
             end
