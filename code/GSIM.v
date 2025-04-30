@@ -25,8 +25,8 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     localparam MAX_ROUND = 69; //maximum number of iterations
     localparam MAX_STAGE = 4;
 
-    assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
-    assign x_out     = ans[cnt_r];                //output the current answer
+    assign out_valid = (state_r == SEND); //output valid when in SEND state
+    assign x_out     = ans[cnt_r];        //output the current answer
 
     function signed [31:0] mul_3;
         input signed [31:0] a;
@@ -45,7 +45,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     function signed [31:0] mul_13;
         input signed [31:0] a;
         begin
-            mul_13 = a + (mul_6(a) << 1);
+            mul_13 = a + (a << 2) + (a << 3);
         end
     endfunction
 
@@ -206,6 +206,10 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
             cnt_stage_r <= 0;
             cnt_round_r <= 0;
             cnt_r       <= 0;
+            r1_r        <= 0;
+            r2_r        <= 0;
+            r3_r        <= 0;
+            r4_r        <= 0;
         end
         else begin
             state_r     <= state_w;
