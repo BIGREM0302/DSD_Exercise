@@ -4,7 +4,7 @@
 `define PAT      "./pattern1.dat"    
 module test;
 parameter N_PAT   = 16;
-
+integer k;
 reg   clk ;
 reg   reset ;
 reg   in_en;
@@ -50,6 +50,10 @@ $dumpfile("GSIM.vcd");
 $dumpvars;
 //$fsdbDumpfile("GSIM.fsdb");
 //$fsdbDumpvars;
+
+for(k = 0; k < 16; k = k + 1)begin
+   $dumpvars(0, GSIM.ans[k]);
+end
 
    out_f = $fopen("out.dat");
    if (out_f == 0) begin
