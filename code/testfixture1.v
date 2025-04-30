@@ -37,9 +37,9 @@ initial	$readmemh (`PAT, pat_mem);
 initial begin
    clk         = 1'b0;
    reset       = 1'b0;
-   in_en       = 1'b0;   
+   in_en       = 1'b0;
    b_in        = 'hz;
-   stop        = 1'b0;   
+   stop        = 1'b0;
    loop        = 0;
 end
 
