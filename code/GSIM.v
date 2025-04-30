@@ -28,6 +28,13 @@ module GSIM (clk, reset, in_en, b_in, out_valid, x_out);
 
     assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
 
+    div_20 D20(
+        .a(r4_w),
+        .clk(clk),
+        .reset(reset),
+        .b(cur_update_var)
+    );
+
     function [31:0] mul_3;
         input [31:0] a;
         begin
@@ -110,19 +117,48 @@ module GSIM (clk, reset, in_en, b_in, out_valid, x_out);
         endcase
     end
 
-    div_20 D20(
-        .a(r4_w),
-        .clk(clk),
-        .reset(reset),
-        .b(cur_update_var)
-    );
-
     always @(*) begin
         if (state_r == CALC) begin
             r1_w = w3+w6;
             r2_w = mul_6((w2 + w5));
             r3_w = mul_13((w1 + w4));
             r4_w = r1_r - r2_r + r3_r + {b[cnt_r], 16'd0};
+        end
+    end
+
+    //b_in
+    always @(posedge clk) begin
+        if (state_r == RECEIVE && in_en) begin
+            b[cnt_r] <= b_in;
+        end
+    end
+
+    always @(posedge clk) begin
+        if (state_r == CALC) begin
+            r1_r <= r1_w;
+            r2_r <= r2_w;
+            r3_r <= r3_w;
+        end
+    end
+
+    //answer update
+    integer i;
+    always @(posedge clk) begin
+        if (state_r == RECEIVE) begin
+            //initial values as all 1
+            for (i = 0; i < 16; i = i + 1) begin
+                ans[i] <= {16'd1, 16'd0};
+            end
+        end
+        else if (state_r == CALC && cnt_stage_r == MAX_STAGE) begin
+            ans[cnt_r] <= cur_update_var;
+        end
+    end
+
+    //x_out
+    always @(posedge clk) begin
+        if (state_r == SEND) begin
+            x_out <= ans[cnt_r];
         end
     end
 
@@ -175,42 +211,6 @@ module GSIM (clk, reset, in_en, b_in, out_valid, x_out);
                 end
             end
         endcase
-    end
-
-    //b_in
-    always @(posedge clk) begin
-        if (state_r == RECEIVE && in_en) begin
-            b[cnt_r] <= b_in;
-        end
-    end
-
-    always @(posedge clk) begin
-        if (state_r == CALC) begin
-            r1_r <= r1_w;
-            r2_r <= r2_w;
-            r3_r <= r3_w;
-        end
-    end
-
-    //answer update
-    integer i;
-    always @(posedge clk) begin
-        if (state_r == RECEIVE) begin
-            //initial values as all 1
-            for (i = 0; i < 16; i = i + 1) begin
-                ans[i] <= {16'd1, 16'd0};
-            end
-        end
-        else if (state_r == CALC && cnt_stage_r == MAX_STAGE) begin
-            ans[cnt_r] <= cur_update_var;
-        end
-    end
-
-    //x_out
-    always @(posedge clk) begin
-        if (state_r == SEND) begin
-            x_out <= ans[cnt_r];
-        end
     end
 
     always @(posedge clk or posedge reset) begin
