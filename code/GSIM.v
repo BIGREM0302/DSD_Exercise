@@ -227,7 +227,7 @@ module div_20(a, clk, b);
     input                clk;
     output signed [31:0] b;
 
-    reg [31:0] b_in [0:2];
+    reg signed [31:0] b_in [0:2];
 
     assign b = (b_in[2] + (b_in[2] << 1)) >>> 6;
 
