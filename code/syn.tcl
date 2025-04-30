@@ -2,6 +2,10 @@
 # import design
 ############################################
 set DESIGN "GSIM"
+set Report_dir "Report"
+set Netlist_dir "Netlist"
+sh mkdir -p $Report_dir
+sh mkdir -p $Netlist_dir
 
 analyze -format verilog "./GSIM.v"
 elaborate $DESIGN
@@ -20,6 +24,9 @@ source -echo -verbose ./GSIM_DC.sdc
 ############################################
 uniquify
 set_fix_multiple_port_nets -all -buffer_constants [get_designs *]
+#0428 update
+set enable_recovery_removal_arcs true 
+
 compile_ultra
 compile -inc
 
@@ -47,10 +54,13 @@ change_names -hierarchy -rules name_rule
 
 remove_unconnected_ports -blast buses [get_cells -hierarchical *]
 set verilogout_higher_designs_first true
-write -format ddc      -hierarchy -output "./${DESIGN}_syn.ddc"
-write -format verilog  -hierarchy -output "./${DESIGN}_syn.v"
-write_sdf -version 3.0 -context verilog ./${DESIGN}_syn.sdf
-write_sdc ./Netlist/${DESIGN}_syn.sdc -version 1.8
+write -format ddc      -hierarchy -output "./$Netlist_dir/${DESIGN}_syn.ddc"
+write -format verilog  -hierarchy -output "./$Netlist_dir/${DESIGN}_syn.v"
+write_sdf -version 3.0 -context verilog ./$Netlist_dir/${DESIGN}_syn.sdf
+write_sdc ./$Netlist_dir/${DESIGN}_syn.sdc -version 1.8
+report_timing -delay_type max > "./$Report_dir/${DESIGN}_timing_max.rpt"
+report_timing -delay_type min > "./$Report_dir/${DESIGN}_timing_min.rpt"
+report_area > "./$Report_dir/${DESIGN}_area.rpt"
 
 report_timing
 report_area
