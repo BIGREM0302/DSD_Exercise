@@ -131,14 +131,25 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
         end
     end
 
-    always @(posedge clk) begin
-        if (state_r == CALC) begin
+    always @(posedge clk or posedge reset) begin
+        if(reset)begin
+            r1_r <= 0;
+            r2_r <= 0;
+            r3_r <= 0;
+            r4_r <= 0;
+        end
+        else begin
             r1_r <= r1_w;
             r2_r <= r2_w;
             r3_r <= r3_w;
             r4_r <= r4_w;
-            if (cnt_stage_r == MAX_STAGE) begin
-                ans[cnt_r] <= r4_w[39:8];
+            if (state_r == RECEIVE && in_en) begin
+                ans[cnt_r] <= 32'd0;
+            end
+            else if (state_r == CALC) begin
+                if (cnt_stage_r == MAX_STAGE) begin
+                    ans[cnt_r] <= r4_w[39:8];
+                end
             end
         end
     end
@@ -146,7 +157,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     always @(posedge clk) begin
         if (state_r == RECEIVE && in_en) begin
             b[cnt_r]   <= b_in;
-            ans[cnt_r] <= {32'd0};
+            //ans[cnt_r] <= {32'd0};
         end
     end
 
@@ -206,10 +217,6 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
             cnt_stage_r <= 0;
             cnt_round_r <= 0;
             cnt_r       <= 0;
-            r1_r        <= 0;
-            r2_r        <= 0;
-            r3_r        <= 0;
-            r4_r        <= 0;
         end
         else begin
             state_r     <= state_w;
