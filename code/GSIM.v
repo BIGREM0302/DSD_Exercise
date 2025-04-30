@@ -12,15 +12,15 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     localparam CALC    = 1; //Do Gauss Seidel approximtiatin
     localparam SEND    = 2;
 
-    reg  [15:0] b   [0:15];               //store offsets b1 b2... b16 16bits each
-    reg  [31:0] ans [0:15];               //store answers x1 x2... x16 32bits each
+    reg signed [15:0] b   [0:15];               //store offsets b1 b2... b16 16bits each
+    reg signed [31:0] ans [0:15];               //store answers x1 x2... x16 32bits each
 
-    reg  [ 3:0] cnt_r, cnt_w;             //counter to keep track of the number of iterations
-    reg  [ 2:0] cnt_stage_r, cnt_stage_w; //counter to keep track of the number of stages
-    reg  [ 6:0] cnt_round_r, cnt_round_w; //counter to keep track of the number of rounds
-    reg  [31:0] w1, w2, w3, w4, w5, w6;
-    reg  [31:0] r1_r, r2_r, r3_r, r1_w, r2_w, r3_w, r4_w;
-    wire [31:0] cur_update_var;
+    reg         [ 3:0] cnt_r, cnt_w;             //counter to keep track of the number of iterations
+    reg         [ 2:0] cnt_stage_r, cnt_stage_w; //counter to keep track of the number of stages
+    reg         [ 6:0] cnt_round_r, cnt_round_w; //counter to keep track of the number of rounds
+    reg  signed [31:0] w1, w2, w3, w4, w5, w6;
+    reg  signed [31:0] r1_r, r2_r, r3_r, r1_w, r2_w, r3_w, r4_w;
+    wire signed [31:0] cur_update_var;
 
     localparam MAX_ITER  = 15; //maximum number of variables
     localparam MAX_ROUND = 69; //maximum number of iterations
@@ -35,21 +35,21 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     );
 
     function [31:0] mul_3;
-        input [31:0] a;
+        input signed [31:0] a;
         begin
             mul_3 = a + (a << 1);
         end
     endfunction
 
     function [31:0] mul_6;
-        input [31:0] a;
+        input signed [31:0] a;
         begin
             mul_6 = mul_3(a) << 1;
         end
     endfunction
 
     function [31:0] mul_13;
-        input [31:0] a;
+        input signed [31:0] a;
         begin
             mul_13 = a + (mul_6(a) << 1);
         end
@@ -229,17 +229,17 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
 endmodule
 
 module div_20(a, clk, b);
-    input  [31:0] a;
-    input         clk;
-    output [31:0] b;
+    input  signed [31:0] a;
+    input                clk;
+    output signed [31:0] b;
 
     reg [31:0] b_in [0:2];
 
-    assign b = (b_in[2] + (b_in[2] << 1)) >> 6;
+    assign b = (b_in[2] + (b_in[2] << 1)) >>> 6;
 
     always @(posedge clk) begin
-        b_in[0] <= a + (a >> 4);
-        b_in[1] <= b_in[0] + (b_in[0] >> 8);
-        b_in[2] <= b_in[1] + (b_in[1] >> 16);
+        b_in[0] <= a + (a >>> 4);
+        b_in[1] <= b_in[0] + (b_in[0] >>> 8);
+        b_in[2] <= b_in[1] + (b_in[1] >>> 16);
     end
 endmodule
