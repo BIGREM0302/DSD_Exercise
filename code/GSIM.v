@@ -12,13 +12,13 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     localparam SEND    = 2;
 
     reg signed [15:0] b   [0:15];               //store offsets b1 b2... b16 16bits each
-    reg signed [47:0] ans [0:15];               //store answers x1 x2... x16 32bits each
+    reg signed [31:0] ans [0:15];               //store answers x1 x2... x16 32bits each
 
     reg        [ 1:0] state_r, state_w;
     reg        [ 3:0] cnt_r, cnt_w;             //counter to keep track of the number of iterations
     reg        [ 2:0] cnt_stage_r, cnt_stage_w; //counter to keep track of the number of stages
     reg        [ 6:0] cnt_round_r, cnt_round_w; //counter to keep track of the number of rounds
-    reg signed [47:0] w1, w2, w3, w4, w5, w6;
+    reg signed [39:0] w1, w2, w3, w4, w5, w6;
     reg signed [47:0] r1_r, r2_r, r3_r, r4_r, r1_w, r2_w, r3_w, r4_w;
 
     localparam MAX_ITER  = 15; //maximum number of variables
@@ -26,7 +26,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     localparam MAX_STAGE = 4;
 
     assign out_valid = (state_r == SEND); //output valid when in SEND state
-    assign x_out     = ans[cnt_r][39:8];        //output the current answer
+    assign x_out     = ans[cnt_r];        //output the current answer
 
     function signed [47:0] mul_3;
         input signed [47:0] a;
@@ -119,9 +119,9 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
         if (state_r == CALC) begin
             case (cnt_stage_r)
                 3'd0: begin
-                    r1_w = w3 + w6 + {{8{b[cnt_r][15]}}, b[cnt_r], 24'd0};
-                    r2_w = mul_6((w2 + w5));
-                    r3_w = mul_13((w1 + w4));
+                    r1_w = {w3, 8'd0} + {w6, 8'd0} + {{8{b[cnt_r][15]}}, b[cnt_r], 24'd0};
+                    r2_w = mul_6({(w2 + w5), 8'd0});
+                    r3_w = mul_13({(w1 + w4), 8'd0});
                 end
                 3'd1: r4_w = r1_r - r2_r + r3_r;
                 3'd2: r4_w = r4_r + (r4_r >>> 4);
@@ -138,7 +138,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
             r3_r <= r3_w;
             r4_r <= r4_w;
             if (cnt_stage_r == MAX_STAGE) begin
-                ans[cnt_r] <= r4_w;
+                ans[cnt_r] <= r4_w[39:8];
             end
         end
     end
@@ -146,7 +146,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     always @(posedge clk) begin
         if (state_r == RECEIVE && in_en) begin
             b[cnt_r]   <= b_in;
-            ans[cnt_r] <= {48'd0};
+            ans[cnt_r] <= {32'd0};
         end
     end
 
