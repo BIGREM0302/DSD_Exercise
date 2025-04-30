@@ -31,14 +31,13 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     div_20 D20(
         .a(r4_w),
         .clk(clk),
-        .reset(reset),
         .b(cur_update_var)
     );
 
     function [31:0] mul_3;
         input [31:0] a;
         begin
-            mul_3 = a + a << 1;
+            mul_3 = a + (a << 1);
         end
     endfunction
 
@@ -52,7 +51,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     function [31:0] mul_13;
         input [31:0] a;
         begin
-            mul_13 = a + mul_6(a) << 1;
+            mul_13 = a + (mul_6(a) << 1);
         end
     endfunction
 
@@ -119,10 +118,10 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
 
     always @(*) begin
         if (state_r == CALC) begin
-            r1_w = w3+w6;
+            r1_w = w3 + w6 + {b[cnt_r], 16'd0};
             r2_w = mul_6((w2 + w5));
             r3_w = mul_13((w1 + w4));
-            r4_w = r1_r - r2_r + r3_r + {b[cnt_r], 16'd0};
+            r4_w = r1_r - r2_r + r3_r;
         end
     end
 
@@ -147,7 +146,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
         if (state_r == RECEIVE) begin
             //initial values as all 1
             for (i = 0; i < 16; i = i + 1) begin
-                ans[i] <= {16'd1, 16'd0};
+                ans[i] <= {16'd1 , 16'd0};
             end
         end
         else if (state_r == CALC && cnt_stage_r == MAX_STAGE) begin
@@ -229,27 +228,18 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     end
 endmodule
 
-module div_20(a, clk, reset, b);
+module div_20(a, clk, b);
     input  [31:0] a;
     input         clk;
-    input         reset;
     output [31:0] b;
 
     reg [31:0] b_in [0:2];
 
-    assign b = b_in[2] >> 6;
+    assign b = (b_in[2] + (b_in[2] << 1)) >> 6;
 
-    integer i;
-    always @(posedge clk or posedge reset) begin
-        if (reset) begin
-            for (i = 0; i < 3; i = i + 1) begin
-                b_in[i] <= 0;
-            end
-        end
-        else begin
-            b_in[0] <= a + a >> 4;
-            b_in[1] <= b_in[0] + b_in[0] >> 8;
-            b_in[2] <= b_in[1] + b_in[1] >> 12;
-        end
+    always @(posedge clk) begin
+        b_in[0] <= a + (a >> 4);
+        b_in[1] <= b_in[0] + (b_in[0] >> 8);
+        b_in[2] <= b_in[1] + (b_in[1] >> 16);
     end
 endmodule

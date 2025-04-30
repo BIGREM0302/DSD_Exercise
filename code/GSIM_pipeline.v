@@ -34,21 +34,21 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     function [31:0] mul_3;
         input signed [31:0] a;
         begin
-            mul_3 = a + a << 1;
+            mul_3 = a + (a << 1);
         end
     endfunction
 
     function [31:0] mul_18;
         input signed [31:0] a;
         begin
-            mul_18 = a << 1 + a << 4;
+            mul_18 = (a << 1) + (a << 4);
         end
     endfunction
 
     function [31:0] mul_39;
         input signed [31:0] a;
         begin
-            mul_39 = a + a << 1 + a << 2 + a << 5;
+            mul_39 = a + (a << 1) + (a << 2) + (a << 5);
         end
     endfunction
 
@@ -130,11 +130,11 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
         pipeline_w[1] = mul_3(pipeline_src[0] + pipeline_src[1]);
         pipeline_w[2] = mul_18(pipeline_src[2] + pipeline_src[3]);
         pipeline_w[3] = mul_39(pipeline_src[4] + pipeline_src[5]);
-        pipeline_w[4] = pipeline_support_1 + pipeline_support_1 >>> 4;
-        pipeline_w[5] = pipeline_r[4] + pipeline_r[4] >>> 8;
+        pipeline_w[4] = pipeline_support_1 + (pipeline_support_1 >>> 4);
+        pipeline_w[5] = pipeline_r[4] + (pipeline_r[4] >>> 8);
 
         pipeline_support_1 = pipeline_r[0] - pipeline_r[2] + pipeline_r[1] + pipeline_r[3];
-        pipeline_support_2 = pipeline_r[5] + pipeline_r[5] >>> 2;
+        pipeline_support_2 = pipeline_r[5] + (pipeline_r[5] >>> 2);
         pipeline_support_3 = pipeline_support_2 >>> 6;
     end
 
