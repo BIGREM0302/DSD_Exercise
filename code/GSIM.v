@@ -1,12 +1,11 @@
 module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
-    input             clk;
-    input             reset;
-    input             in_en;
-    input      [15:0] b_in;
+    input               clk;
+    input               reset;
+    input               in_en;
+    input signed [15:0] b_in;
+
     output            out_valid;
     output reg [31:0] x_out;
-
-    reg [1:0] state_r, state_w;
 
     localparam RECEIVE = 0;
     localparam CALC    = 1; //Do Gauss Seidel approximtiatin
@@ -15,6 +14,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     reg signed [15:0] b   [0:15];               //store offsets b1 b2... b16 16bits each
     reg signed [31:0] ans [0:15];               //store answers x1 x2... x16 32bits each
 
+    reg         [ 1:0] state_r, state_w;
     reg         [ 3:0] cnt_r, cnt_w;             //counter to keep track of the number of iterations
     reg         [ 2:0] cnt_stage_r, cnt_stage_w; //counter to keep track of the number of stages
     reg         [ 6:0] cnt_round_r, cnt_round_w; //counter to keep track of the number of rounds
@@ -34,21 +34,21 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
         .b(cur_update_var)
     );
 
-    function [31:0] mul_3;
+    function signed [31:0] mul_3;
         input signed [31:0] a;
         begin
             mul_3 = a + (a << 1);
         end
     endfunction
 
-    function [31:0] mul_6;
+    function signed [31:0] mul_6;
         input signed [31:0] a;
         begin
             mul_6 = mul_3(a) << 1;
         end
     endfunction
 
-    function [31:0] mul_13;
+    function signed [31:0] mul_13;
         input signed [31:0] a;
         begin
             mul_13 = a + (mul_6(a) << 1);
@@ -128,7 +128,8 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     //b_in
     always @(posedge clk) begin
         if (state_r == RECEIVE && in_en) begin
-            b[cnt_r] <= b_in;
+            b[cnt_r]   <= b_in;
+            ans[cnt_r] <= {b_in, 16'd0};
         end
     end
 
@@ -141,15 +142,8 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     end
 
     //answer update
-    integer i;
     always @(posedge clk) begin
-        if (state_r == RECEIVE) begin
-            //initial values as all 1
-            for (i = 0; i < 16; i = i + 1) begin
-                ans[i] <= {16'd1 , 16'd0};
-            end
-        end
-        else if (state_r == CALC && cnt_stage_r == MAX_STAGE) begin
+        if (state_r == CALC && cnt_stage_r == MAX_STAGE) begin
             ans[cnt_r] <= cur_update_var;
         end
     end
