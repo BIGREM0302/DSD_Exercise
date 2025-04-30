@@ -4,8 +4,8 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     input               in_en;
     input signed [15:0] b_in;
 
-    output            out_valid;
-    output reg [31:0] x_out;
+    output        out_valid;
+    output [31:0] x_out;
 
     localparam RECEIVE = 0;
     localparam CALC    = 1; //Do Gauss Seidel approximtiatin
@@ -19,20 +19,15 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     reg         [ 2:0] cnt_stage_r, cnt_stage_w; //counter to keep track of the number of stages
     reg         [ 6:0] cnt_round_r, cnt_round_w; //counter to keep track of the number of rounds
     reg  signed [31:0] w1, w2, w3, w4, w5, w6;
-    reg  signed [31:0] r1_r, r2_r, r3_r, r1_w, r2_w, r3_w, r4_w;
-    wire signed [31:0] cur_update_var;
+    reg  signed [31:0] r1_r, r2_r, r3_r, r4_r, r1_w, r2_w, r3_w, r4_w;
+    //wire signed [31:0] cur_update_var;
 
     localparam MAX_ITER  = 15; //maximum number of variables
     localparam MAX_ROUND = 69; //maximum number of iterations
     localparam MAX_STAGE = 4;
 
     assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
-
-    div_20 D20(
-        .a(r4_w),
-        .clk(clk),
-        .b(cur_update_var)
-    );
+    assign x_out     = ans[cnt_r];                //output the current answer
 
     function signed [31:0] mul_3;
         input signed [31:0] a;
@@ -117,19 +112,31 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     end
 
     always @(*) begin
-        if (state_r == CALC) begin
-            r1_w = w3 + w6 + {b[cnt_r], 16'd0};
-            r2_w = mul_6((w2 + w5));
-            r3_w = mul_13((w1 + w4));
-            r4_w = r1_r - r2_r + r3_r;
-        end
-    end
+        r1_w = r1_r;
+        r2_w = r2_r;
+        r3_w = r3_r;
+        r4_w = r4_r;
 
-    //b_in
-    always @(posedge clk) begin
-        if (state_r == RECEIVE && in_en) begin
-            b[cnt_r]   <= b_in;
-            ans[cnt_r] <= {b_in, 16'd0};
+        if (state_r == CALC) begin
+            case (cnt_stage_r)
+                3'd0: begin
+                    r1_w = w3 + w6 + {b[cnt_r], 16'd0};
+                    r2_w = mul_6((w2 + w5));
+                    r3_w = mul_13((w1 + w4));
+                end
+                3'd1: begin
+                    r4_w = r1_r - r2_r + r3_r;
+                end
+                3'd2: begin
+                    r4_w = r4_r + (r4_r >>> 4);
+                end
+                3'd3: begin
+                    r4_w = r4_r + (r4_r >>> 8);
+                end
+                3'd4: begin
+                    r4_w = (r4_r >>> 6) + (r4_r >>> 22) + (r4_r >>> 5) + (r4_r >>> 21);
+                end
+            endcase
         end
     end
 
@@ -138,20 +145,17 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
             r1_r <= r1_w;
             r2_r <= r2_w;
             r3_r <= r3_w;
+            r4_r <= r4_w;
+            if (cnt_stage_r == MAX_STAGE) begin
+                ans[cnt_r] <= r4_w;
+            end
         end
     end
 
-    //answer update
     always @(posedge clk) begin
-        if (state_r == CALC && cnt_stage_r == MAX_STAGE) begin
-            ans[cnt_r] <= cur_update_var;
-        end
-    end
-
-    //x_out
-    always @(posedge clk) begin
-        if (state_r == SEND) begin
-            x_out <= ans[cnt_r];
+        if (state_r == RECEIVE && in_en) begin
+            b[cnt_r]   <= b_in;
+            ans[cnt_r] <= {b_in, 16'd0};
         end
     end
 
@@ -176,9 +180,6 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
             end
 
             CALC: begin
-                //cnt_stage: 0 1 2 3 4 0 1 2 3 4 ...
-                //cnt: 0 0 0 0 0 1 1 1 1 1 1 2 2 2 2 2 2 ...
-                //cnt_round: 0 ... 1... 2... 69 ...
                 if (cnt_stage_r == MAX_STAGE) begin
                     cnt_stage_w = 0;
                     if (cnt_r == MAX_ITER) begin
@@ -219,21 +220,5 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
             cnt_round_r <= cnt_round_w;
             cnt_r       <= cnt_w;
         end
-    end
-endmodule
-
-module div_20(a, clk, b);
-    input  signed [31:0] a;
-    input                clk;
-    output signed [31:0] b;
-
-    reg signed [31:0] b_in [0:2];
-
-    assign b = (b_in[2] + (b_in[2] << 1)) >>> 6;
-
-    always @(posedge clk) begin
-        b_in[0] <= a + (a >>> 4);
-        b_in[1] <= b_in[0] + (b_in[0] >>> 8);
-        b_in[2] <= b_in[1] + (b_in[1] >>> 16);
     end
 endmodule
