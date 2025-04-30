@@ -1,4 +1,4 @@
-module GSIM (clk, reset, in_en, b_in, out_valid, x_out);
+module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     input             clk;
     input             reset;
     input             in_en;
