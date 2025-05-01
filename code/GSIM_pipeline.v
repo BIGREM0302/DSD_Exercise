@@ -6,136 +6,130 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     output              out_valid;
     output       [31:0] x_out;
 
-    reg [2:0] state_r, state_w;
+    reg [1:0] state_r, state_w;
 
     localparam RECEIVE = 0;
     localparam CALC    = 1; //Do Gauss Seidel approximtiatin
     localparam SEND    = 2;
 
-    reg signed [15:0] b            [0:15]; //store offsets b1 b2... b16 16bits each
-    reg signed [31:0] ans          [0:15]; //store answers x1 x2... x16 32bits each
-    reg signed [31:0] pipeline_r   [0:5 ];
-    reg signed [31:0] pipeline_w   [0:5 ];
-    reg signed [31:0] pipeline_src [0:5 ];
+    reg signed [15:0] b            [0:15];   //store offsets b1 b2... b16 16bits each
+    reg signed [31:0] ans          [0:15];   //store answers x1 x2... x16 32bits each
 
-    reg signed [31:0] pipeline_support_1;
-    reg signed [31:0] pipeline_support_2;
-    reg signed [31:0] pipeline_support_3;
-    reg        [10:0] cnt_r, cnt_w;
-    reg        [ 3:0] pipeline_b_src;
+    reg signed [40:0] pipeline_r   [0:5 ];
+    reg signed [40:0] pipeline_w   [0:5 ];
+    reg signed [40:0] pipeline_src [0:5 ];
+
+    reg signed [40:0] pipeline_support_1;
+    reg signed [40:0] pipeline_support_2;
+    reg signed [40:0] pipeline_support_3;
+    reg        [12:0] cnt_r, cnt_w;
     reg        [ 3:0] mapping;
 
-    localparam MAX_ITER     = 100; //maximum number of iterations
-    localparam PIPELINE_MAX = 16 * MAX_ITER;
+    wire [3:0] idx0 = (cnt_r[3] | cnt_r[2]) ? 4'd13 : 4'd12;
+    wire [3:0] idx1 = (cnt_r[3] & cnt_r[2]) ? 4'd4 : 4'd3;
+    wire [3:0] idx2 = (cnt_r[3])? 4'd9 : 4'd8 ;
+    wire [3:0] idx3 = (cnt_r[3])? 4'd8 : 4'd7 ;
+    wire [3:0] idx4 = (cnt_r[3] & cnt_r[2]) ? 4'd5 : 4'd4;
+    wire [3:0] idx5 = (cnt_r[3] | cnt_r[2]) ? 4'd12 : 4'd11;
+
+    localparam MAX_ITER     = 200; //maximum number of iterations
+    localparam PIPELINE_MAX = (16 * MAX_ITER) - 1;
 
     assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
     assign x_out = ans[mapping];
 
-    function [31:0] mul_3;
+    function signed [40:0] mul_3;
         input signed [31:0] a;
         begin
-            mul_3 = a + (a << 1);
+            mul_3 = a + (a<<<1);
         end
     endfunction
 
-    function [31:0] mul_18;
+    function signed [40:0] mul_18;
         input signed [31:0] a;
         begin
-            mul_18 = (a << 1) + (a << 4);
+            mul_18 = (a<<<4) + (a<<<1);
         end
     endfunction
 
-    function [31:0] mul_39;
+    function signed [40:0] mul_39;
         input signed [31:0] a;
         begin
-            mul_39 = a + (a << 1) + (a << 2) + (a << 5);
+            mul_39 = (a<<<5)  + (a<<<2)  + (a<<<1)  + a;
         end
     endfunction
 
-    // at ans[0], we only see ans[13],ans[9],ans[5],ans[4],ans[8],ans[12] and b[cnt_r[3:0] mod 16?]
-    // far: ans[5], ans[12]
-    // near: ans[4], ans[13]
+    //pipeline choose
     always @(*) begin
-        pipeline_src[0] = ans[12];          //future 3
-        pipeline_src[1] = ans[5];           //past 3
-        pipeline_src[2] = ans[8];           //future 2
-        pipeline_src[3] = ans[9];           //past 2
-        pipeline_src[4] = ans[4];           //future 1
-        pipeline_src[5] = ans[13];          //past 1
+        pipeline_src[0] = {{9{ans[idx0][31]}}, ans[idx0]};  // future 3
+        pipeline_src[1] = {{9{ans[idx1][31]}}, ans[idx1]};  // past 3
+        pipeline_src[2] = {{9{ans[idx2][31]}}, ans[idx2]};  // future 2
+        pipeline_src[3] = {{9{ans[idx3][31]}}, ans[idx3]};  // past 2
+        pipeline_src[4] = {{9{ans[idx4][31]}}, ans[idx4]};  // future 1
+        pipeline_src[5] = {{9{ans[idx5][31]}}, ans[idx5]};  // past 1
 
-        case (cnt_r[3:0])  // no reschedule
+        case (cnt_r[3:0])  
             0: begin
                 pipeline_src[1] = 0;
                 pipeline_src[3] = 0;
                 pipeline_src[5] = 0;
-                pipeline_b_src  = 4'd0;
-            end
-            1: begin
-                pipeline_b_src = 4'd4;
-            end
-            2: begin
-                pipeline_b_src = 4'd8;
-            end
-            3: begin
-                pipeline_b_src = 4'd12;
             end
             4: begin
                 pipeline_src[1] = 0;
                 pipeline_src[3] = 0;
-                pipeline_b_src  = 4'd1;
-            end
-            5: begin
-                pipeline_b_src = 4'd5;
-            end
-            6: begin
-                pipeline_b_src = 4'd9;
             end
             7: begin
                 pipeline_src[0] = 0;
-                pipeline_b_src  = 4'd13;
             end
             8: begin
                 pipeline_src[1] = 0;
-                pipeline_b_src  = 4'd2;
-            end
-            9: begin
-                pipeline_b_src = 4'd6;
-            end
-            10: begin
-                pipeline_b_src = 4'd10;
             end
             11: begin
                 pipeline_src[0] = 0;
                 pipeline_src[2] = 0;
-                pipeline_b_src  = 4'd14;
-            end
-            12: begin
-                pipeline_b_src = 4'd3;
-            end
-            13: begin
-                pipeline_b_src = 4'd7;
-            end
-            14: begin
-                pipeline_b_src = 4'd11;
             end
             15: begin
                 pipeline_src[0] = 0;
                 pipeline_src[2] = 0;
                 pipeline_src[4] = 0;
-                pipeline_b_src  = 4'd15;
             end
         endcase
+    end
 
-        pipeline_w[0] = mul_3({b[pipeline_b_src], 16'd0});
+    //pipeline count
+    always @(*) begin
+
+        pipeline_w[0] = mul_3({b[mapping], 16'd0});
         pipeline_w[1] = mul_3(pipeline_src[0] + pipeline_src[1]);
         pipeline_w[2] = mul_18(pipeline_src[2] + pipeline_src[3]);
         pipeline_w[3] = mul_39(pipeline_src[4] + pipeline_src[5]);
+
+        pipeline_support_1 = (pipeline_r[0] - pipeline_r[2]) + (pipeline_r[1] + pipeline_r[3]);
         pipeline_w[4] = pipeline_support_1 + (pipeline_support_1 >>> 4);
+
         pipeline_w[5] = pipeline_r[4] + (pipeline_r[4] >>> 8);
 
-        pipeline_support_1 = pipeline_r[0] - pipeline_r[2] + pipeline_r[1] + pipeline_r[3];
-        pipeline_support_2 = pipeline_r[5] + (pipeline_r[5] >>> 2);
+        pipeline_support_2 = pipeline_r[5] + (pipeline_r[5] >>> 12);
         pipeline_support_3 = pipeline_support_2 >>> 6;
+
+    end
+
+    // check architecture correct?
+    always @(*) begin
+
+        pipeline_w[0] = 3*{b[mapping], 16'd0};
+        pipeline_w[1] = 3*(pipeline_src[0] + pipeline_src[1]);
+        pipeline_w[2] = 18*(pipeline_src[2] + pipeline_src[3]);
+        pipeline_w[3] = 39*(pipeline_src[4] + pipeline_src[5]);
+
+        pipeline_support_1 = (pipeline_r[0] - pipeline_r[2]) + (pipeline_r[1] + pipeline_r[3]);
+        pipeline_w[4] = (pipeline_support_1)*(1+2**(-4));
+
+        pipeline_w[5] = (pipeline_r[4])*(1+2**(-8));
+
+        pipeline_support_2 = (pipeline_r[5])*(1+2**(-12));
+        pipeline_support_3 = (pipeline_support_2)/64;
+
     end
 
     //FSM
@@ -157,7 +151,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
             end
 
             CALC: begin
-                if (cnt_r == PIPELINE_MAX - 1) begin
+                if (cnt_r == PIPELINE_MAX) begin
                     state_w = SEND;
                     cnt_w   = 0;
                 end
@@ -269,10 +263,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
             ans[15] <= 0;
         end
         else begin
-            if (state_r == RECEIVE && in_en) begin
-                ans[mapping] <= ({b_in, 16'd0});
-            end
-            else if (state_r == CALC) begin
+            if (state_r == CALC) begin
                 ans[0]  <= ans[1];
                 ans[1]  <= ans[2];
                 ans[2]  <= ans[3];
@@ -285,7 +276,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
                 ans[9]  <= ans[10];
                 ans[10] <= ans[11];
                 ans[11] <= ans[12];
-                ans[12] <= pipeline_support_3;
+                ans[12] <= pipeline_support_3[31:0];
                 ans[13] <= ans[14];
                 ans[14] <= ans[15];
                 ans[15] <= ans[0];
