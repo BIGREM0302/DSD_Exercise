@@ -1,5 +1,5 @@
 `timescale 1ns/10ps
-`define CYCLE    10.0           	         // Modify your clock period here
+`define CYCLE    1           	         // Modify your clock period here
 `define SDFFILE  "./Netlist/GSIM_syn.sdf"	      // Modify your sdf file name
 `define PAT      "./pattern1.dat"    
 module test;
@@ -43,17 +43,13 @@ initial begin
    loop        = 0;
 end
 
-always begin #(`CYCLE/2) clk = ~clk; end
+always begin #(`CYCLE/2.0) clk = ~clk; end
 
 initial begin
 $dumpfile("GSIM.vcd");
 $dumpvars;
 //$fsdbDumpfile("GSIM.fsdb");
 //$fsdbDumpvars;
-
-for(k = 0; k < 16; k = k + 1)begin
-   $dumpvars(0, GSIM.ans[k]);
-end
 
    out_f = $fopen("out.dat");
    if (out_f == 0) begin

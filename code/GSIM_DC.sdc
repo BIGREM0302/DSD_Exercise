@@ -1,6 +1,6 @@
 # operating conditions and boundary conditions #
 
-set cycle  1.0         ;#clock period defined by designer
+set cycle  0.5         ;#clock period defined by designer
 
 create_clock -name clk -period $cycle [get_ports  clk]
 set_dont_touch_network      [get_clocks clk]
