@@ -32,7 +32,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     wire [3:0] idx4 = (cnt_r[3] & cnt_r[2]) ? 4'd5 : 4'd4;
     wire [3:0] idx5 = (cnt_r[3] | cnt_r[2]) ? 4'd12 : 4'd11;
 
-    localparam MAX_ITER     = 100; //maximum number of iterations
+    localparam MAX_ITER     = 77; //maximum number of iterations
     localparam PIPELINE_MAX = (16 * MAX_ITER) - 1;
 
     assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
@@ -178,22 +178,22 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     //b_in
     always @(posedge clk or posedge reset) begin
         if (reset) begin
-            b[0]  = 0;
-            b[1]  = 0;
-            b[2]  = 0;
-            b[3]  = 0;
-            b[4]  = 0;
-            b[5]  = 0;
-            b[6]  = 0;
-            b[7]  = 0;
-            b[8]  = 0;
-            b[9]  = 0;
-            b[10] = 0;
-            b[11] = 0;
-            b[12] = 0;
-            b[13] = 0;
-            b[14] = 0;
-            b[15] = 0;
+            b[0]  <= 0;
+            b[1]  <= 0;
+            b[2]  <= 0;
+            b[3]  <= 0;
+            b[4]  <= 0;
+            b[5]  <= 0;
+            b[6]  <= 0;
+            b[7]  <= 0;
+            b[8]  <= 0;
+            b[9]  <= 0;
+            b[10] <= 0;
+            b[11] <= 0;
+            b[12] <= 0;
+            b[13] <= 0;
+            b[14] <= 0;
+            b[15] <= 0;
         end
         else begin
             if (state_r == RECEIVE && in_en) begin
