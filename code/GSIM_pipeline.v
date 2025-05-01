@@ -114,6 +114,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
 
     end
 
+    /*
     // check architecture correct?
     always @(*) begin
 
@@ -131,6 +132,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
         pipeline_support_3 = (pipeline_support_2)/64;
 
     end
+    */
 
     //FSM
     always @(*) begin
