@@ -15,13 +15,13 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     reg signed [15:0] b            [0:15];   //store offsets b1 b2... b16 16bits each
     reg signed [31:0] ans          [0:15];   //store answers x1 x2... x16 32bits each
 
-    reg signed [33:0] pipeline_r   [0:5 ];
-    reg signed [33:0] pipeline_w   [0:5 ];
-    reg signed [33:0] pipeline_src [0:5 ];
+    reg signed [35:0] pipeline_r   [0:5 ];
+    reg signed [35:0] pipeline_w   [0:5 ];
+    reg signed [35:0] pipeline_src [0:5 ];
 
-    reg signed [33:0] pipeline_support_1;
-    reg signed [33:0] pipeline_support_2;
-    reg signed [33:0] pipeline_support_3;
+    reg signed [35:0] pipeline_support_1;
+    reg signed [35:0] pipeline_support_2;
+    reg signed [35:0] pipeline_support_3;
     reg        [11:0] cnt_r, cnt_w;
     reg        [ 3:0] mapping;
 
@@ -32,28 +32,28 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     wire [3:0] idx4 = (cnt_r[3] & cnt_r[2]) ? 4'd5 : 4'd4;
     wire [3:0] idx5 = (cnt_r[3] | cnt_r[2]) ? 4'd12 : 4'd11;
 
-    localparam MAX_ITER     = 70; //maximum number of iterations
+    localparam MAX_ITER     = 100; //maximum number of iterations
     localparam PIPELINE_MAX = (16 * MAX_ITER) - 1;
 
     assign out_valid = (state_r == SEND) ? 1 : 0; //output valid when in SEND state
     assign x_out = ans[mapping];
 
-    function signed [33:0] mul_3_2;
-        input signed [33:0] a;
+    function signed [35:0] mul_3_2;
+        input signed [35:0] a;
         begin
             mul_3_2 = (a>>>2) + (a>>>1);
         end
     endfunction
 
-    function signed [33:0] mul_18_2;
-        input signed [33:0] a;
+    function signed [35:0] mul_18_2;
+        input signed [35:0] a;
         begin
             mul_18_2 = (a<<<2) + (a>>>1);
         end
     endfunction
 
-    function signed [33:0] mul_39_2;
-        input signed [33:0] a;
+    function signed [35:0] mul_39_2;
+        input signed [35:0] a;
         begin
             mul_39_2 = (a<<<3)  + a  + (a>>>1)  + (a>>>2);
         end
@@ -61,12 +61,12 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
 
     //pipeline choose
     always @(*) begin
-        pipeline_src[0] = {ans[idx0],2'sd0};  // future 3
-        pipeline_src[1] = {ans[idx1],2'sd0};  // past 3
-        pipeline_src[2] = {ans[idx2],2'sd0};  // future 2
-        pipeline_src[3] = {ans[idx3],2'sd0};  // past 2
-        pipeline_src[4] = {ans[idx4],2'sd0};  // future 1
-        pipeline_src[5] = {ans[idx5],2'sd0};  // past 1
+        pipeline_src[0] = {{2{ans[idx0][31]}},ans[idx0],2'sd0};  // future 3
+        pipeline_src[1] = {{2{ans[idx1][31]}},ans[idx1],2'sd0};  // past 3
+        pipeline_src[2] = {{2{ans[idx2][31]}},ans[idx2],2'sd0};  // future 2
+        pipeline_src[3] = {{2{ans[idx3][31]}},ans[idx3],2'sd0};  // past 2
+        pipeline_src[4] = {{2{ans[idx4][31]}},ans[idx4],2'sd0};  // future 1
+        pipeline_src[5] = {{2{ans[idx5][31]}},ans[idx5],2'sd0};  // past 1
 
         case (cnt_r[3:0])  
             0: begin
@@ -99,7 +99,7 @@ module GSIM(clk, reset, in_en, b_in, out_valid, x_out);
     //pipeline count
     always @(*) begin
 
-        pipeline_w[0] = mul_3_2({b[mapping],18'sd0});
+        pipeline_w[0] = mul_3_2({{2{b[mapping][15]}},b[mapping],18'sd0});
         pipeline_w[1] = mul_3_2(pipeline_src[0] + pipeline_src[1]);
         pipeline_w[2] = mul_18_2(pipeline_src[2] + pipeline_src[3]);
         pipeline_w[3] = mul_39_2(pipeline_src[4] + pipeline_src[5]);
